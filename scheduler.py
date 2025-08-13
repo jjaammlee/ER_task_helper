@@ -60,3 +60,42 @@ def find_common_free_time(users, day_start, day_end, min_duration = timedelta(mi
         free_slots.append((current, day_end))
 
     return free_slots
+
+
+if __name__ == "__main__":
+    users = [
+        ("jjaamm.lee", "P190317230718C100223"),
+        ("changkyu_choi", "S020126111103A200420"),
+        ("jae-joon.han", "M070828010012A200206"),
+        ("junhaeng2.lee", "M090119015926C108393"),
+        ("macho", "R020218102336C109331"),
+        ("hyunduk2.kim", "M221220140125C108595"),
+        ("derek.ji", "M090902012630C105862")
+    ]
+
+    TIMEZONE = timezone(timedelta(hours=9))
+    start_date = datetime(2025, 8, 11, tzinfo=TIMEZONE)
+    end_date = datetime(2025, 8, 17, tzinfo=TIMEZONE)
+
+    current_date = start_date
+    while current_date <= end_date:
+        day_start = current_date.replace(hour=9, minute=0, second=0, microsecond=0)
+        day_end = current_date.replace(hour=18, minute=0, second=0, microsecond=0)
+        start_at = day_start.isoformat()
+        end_at = day_end.isoformat()
+
+        all_users_events = []
+        for login_id, epid in users:
+            schedules = fetch_user_schedules(login_id, epid, start_at, end_at)
+            events = parse_schedules(schedules)
+            all_users_events.append(events)
+
+        common_free_times = find_common_free_time(all_users_events, day_start, day_end)
+
+        print(f"\n{current_date.date()} 공통 빈 시간대:")
+        if not common_free_times:
+            print(" - 없음")
+        for start, end in common_free_times:
+            print(f" - {start.time()} ~ {end.time()}")
+
+        current_date += timedelta(days=1)
