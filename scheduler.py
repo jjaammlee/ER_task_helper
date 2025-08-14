@@ -61,41 +61,62 @@ def find_common_free_time(users, day_start, day_end, min_duration = timedelta(mi
 
     return free_slots
 
+def input_users():
+    users = []
+    print("사용자 정보를 입력하세요. (형식: login_id epid)")
+    print("입력을 마치려면 빈 줄을 입력하세요.")
+    while True:
+        line = input(">> ").strip()
+        if not line:
+            break
+        try:
+            login_id, epid = line.split()
+            users.append((login_id, epid))
+        except ValueError:
+            print("형식이 올바르지 않습니다. 예: jjaamm.lee P190317230718C100223")
+    return users
+
+def input_date(prompt, default_date):
+    while True:
+        user_input = input(f"{prompt} (yyyy-mm-dd) [기본값: {default_date.strftime('%Y-%m-%d')}]: ").strip()
+        if not user_input:
+            return default_date
+        try:
+            return datetime.strptime(user_input, "%Y-%m-%d").replace(tzinfo=timezone(timedelta(hours=9)))
+        except ValueError:
+            print("날짜 형식이 올바르지 않습니다. 다시 입력해주세요.")
 
 if __name__ == "__main__":
-    users = [
-        ("jjaamm.lee", "P190317230718C100223"),
-        ("changkyu_choi", "S020126111103A200420"),
-        ("jae-joon.han", "M070828010012A200206"),
-        ("junhaeng2.lee", "M090119015926C108393"),
-        ("macho", "R020218102336C109331"),
-        ("hyunduk2.kim", "M221220140125C108595"),
-        ("derek.ji", "M090902012630C105862")
-    ]
+    users = input_users()
 
-    TIMEZONE = timezone(timedelta(hours=9))
-    start_date = datetime(2025, 8, 11, tzinfo=TIMEZONE)
-    end_date = datetime(2025, 8, 17, tzinfo=TIMEZONE)
+    TIMEZONE = timezone(timedelta(hours=9))  # KST
+    today = datetime.now(TIMEZONE).replace(hour=0, minute=0, second=0, microsecond=0)
+    default_start = today
+    default_end = today + timedelta(days=7)
+
+    start_date = input_date("일정 조회 시작일", default_start)
+    end_date = input_date("일정 조회 종료일", default_end)
 
     current_date = start_date
     while current_date <= end_date:
-        day_start = current_date.replace(hour=9, minute=0, second=0, microsecond=0)
-        day_end = current_date.replace(hour=18, minute=0, second=0, microsecond=0)
-        start_at = day_start.isoformat()
-        end_at = day_end.isoformat()
+        if current_date.weekday() < 5:  # 주말은 건너뜀
+            day_start = current_date.replace(hour=8, minute=0, second=0, microsecond=0)
+            day_end = current_date.replace(hour=18, minute=0, second=0, microsecond=0)
+            start_at = day_start.isoformat()
+            end_at = day_end.isoformat()
 
-        all_users_events = []
-        for login_id, epid in users:
-            schedules = fetch_user_schedules(login_id, epid, start_at, end_at)
-            events = parse_schedules(schedules)
-            all_users_events.append(events)
+            all_users_events = []
+            for login_id, epid in users:
+                schedules = fetch_user_schedules(login_id, epid, start_at, end_at)
+                events = parse_schedules(schedules)
+                all_users_events.append(events)
 
-        common_free_times = find_common_free_time(all_users_events, day_start, day_end)
+            common_free_times = find_common_free_time(all_users_events, day_start, day_end)
 
-        print(f"\n{current_date.date()} 공통 빈 시간대:")
-        if not common_free_times:
-            print(" - 없음")
-        for start, end in common_free_times:
-            print(f" - {start.time()} ~ {end.time()}")
+            print(f"\n{current_date.date()} 공통 빈 시간대:")
+            if not common_free_times:
+                print(" - 없음")
+            for start, end in common_free_times:
+                print(f" - {start.time()} ~ {end.time()}")
 
         current_date += timedelta(days=1)
