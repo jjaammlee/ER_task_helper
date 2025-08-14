@@ -1,6 +1,6 @@
 import pytest
 from datetime import datetime, timedelta, timezone
-from scheduler import parse_schedule, find_common_free_time
+from scheduler import parse_schedules, find_common_free_time
 
 
 def test_parse_schedule():
@@ -14,7 +14,7 @@ def test_parse_schedule():
             "endTime": {"dateTime": "2025-08-11T14:00:00+09:00"},
         },
     ]
-    event= parse_schedule(schedules)
+    event= parse_schedules(schedules)
     assert len(event) == 2
 
 def test_find_common_free_time():
