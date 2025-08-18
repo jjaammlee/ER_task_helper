@@ -91,6 +91,9 @@ class Scheduler:
             except ValueError:
                 print("형식이 올바르지 않습니다. 예: jjaamm.lee P190317230718C100223")
 
+        if not users:
+            raise ValueError("사용자 목록이 비어 있습니다.")
+
         return users
 
     def input_date(self, prompt: str, default_date: datetime) -> datetime:
