@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from mail_sender import MailSender
 from scheduler import Scheduler
 
 
@@ -19,6 +20,16 @@ class ShellSchedulerCommand(Command):
         scheduler = Scheduler()
         scheduler.execute()
 
+
+class ShellMailingCommand(Command):
+    def __init__(self, shell):
+        super().__init__(shell)
+
+    def execute(self):
+        mail_sender = MailSender()
+        mail_sender.execute()
+
+
 class ShellHelpCommand(Command):
     def __init__(self, shell):
         super().__init__(shell)
@@ -28,15 +39,19 @@ class ShellHelpCommand(Command):
             "[Help]",
             "===== Shell 명령어 설명 =====",
             "scheduler : 여러 사람들의 공통된 빈 시간을 알려주는 기능입니다.",
+            "mailing   : 멘토링 파일의 멘토들을에게 멘토링 안내 메일을 자동으로 보내주는 기능입니다."
             "help      : 사용 가능한 명령어 목록을 보여줍니다.",
             "exit      : 셸을 종료합니다.",
             sep='\n'
         )
+
+
 class Shell:
     def __init__(self):
         self._command_dict = {
             "help": lambda: ShellHelpCommand(self),
             "scheduler": lambda: ShellSchedulerCommand(self),
+            "mailing": lambda: ShellMailingCommand(self),
         }
 
     def command_execute(self, args):
@@ -47,6 +62,7 @@ class Shell:
 
         ShellCommand: Command = self._command_dict[args]()
         ShellCommand.execute()
+
     def main(self):
         while True:
             command = input("Shell>").strip()
