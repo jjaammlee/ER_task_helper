@@ -3,6 +3,7 @@ import requests
 import os
 import win32com.client as win32
 import warnings
+from typing import List, Dict
 from api_config import MAIL_API_CONFIG, build_headers
 from mail_profiles import MAIL_PROFILES
 
@@ -15,12 +16,12 @@ HEADERS = build_headers(stage=True)
 
 
 class MailSender:
-    def __init__(self, profile_key):
+    def __init__(self, profile_key: str) -> None:
         if profile_key not in MAIL_PROFILES:
             raise ValueError(f"'{profile_key}' is not a valid mail profile.")
         self.profile = MAIL_PROFILES[profile_key]
 
-    def get_recipients_from_excel(self, sheet):
+    def get_recipients_from_excel(self, sheet) -> List[Dict[str, str]]:
         used_range = sheet.UsedRange
         row_count = used_range.Rows.Count
 
@@ -40,7 +41,7 @@ class MailSender:
                     })
         return recipients
 
-    def remove_columns_and_save(self, sheet, workbook):
+    def remove_columns_and_save(self, sheet, workbook) -> None:
         used_range = sheet.UsedRange
         row_count = used_range.Rows.Count
 
@@ -84,7 +85,7 @@ class MailSender:
 
         workbook.SaveAs(self.newFilePath)
 
-    def send_mail(self, recipientList):
+    def send_mail(self, recipientList: List[Dict[str, str]]) -> None:
         body = {
             "subject": self.profile["mail_subject"],
             "contents": self.profile["mail_body"],
@@ -113,10 +114,10 @@ class MailSender:
         except Exception as e:
             print(f"[ERROR] 메일 전송 실패: {e}")
 
-    def input_directory(self, prompt):
+    def input_directory(self, prompt: str) -> str:
         return input(f"{prompt}: ").strip()
 
-    def execute(self):
+    def execute(self) -> None:
         excel = win32.DispatchEx('Excel.Application')
         excel.Visible = False
 
