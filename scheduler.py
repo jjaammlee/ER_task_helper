@@ -2,16 +2,11 @@ import requests
 from datetime import datetime, timedelta, timezone
 from dateutil import parser
 from typing import List, Tuple, Dict
+from api_config import SCHEDULER_API_CONFIG, build_headers
 
-
-API_URL = "https://openapi.samsung.net/pims/calendar/api/v2.0/schedules"
-SYSTEM_ID = "KCC10REST03311"
-ACCESS_TOKEN = "be3200c6-3215-3063-909b-e788ed8daedd"
-
-HEADERS = {
-    "System-ID": SYSTEM_ID,
-    "Authorization": f"Bearer {ACCESS_TOKEN}"
-}
+BASE_URL = SCHEDULER_API_CONFIG["BASE_URL"]
+URL = f"{BASE_URL}/schedules"
+HEADERS = build_headers(stage=False)
 
 TIMEZONE = timezone(timedelta(hours=9))  # KST
 DEFAULT_START_HOUR = 8
@@ -28,7 +23,7 @@ class Scheduler:
         }
 
         try:
-            response = requests.get(API_URL, headers=HEADERS, params=params)
+            response = requests.get(URL, headers=HEADERS, params=params)
             response.raise_for_status()
             return response.json()
         except requests.RequestException as e:
@@ -47,7 +42,9 @@ class Scheduler:
 
         return events
 
-    def find_common_free_time(self, users: List[List[Tuple[datetime, datetime]]], day_start: datetime, day_end: datetime, min_duration: timedelta = DEFAULT_DURATION) -> List[Tuple[datetime, datetime]]:
+    def find_common_free_time(self, users: List[List[Tuple[datetime, datetime]]], day_start: datetime,
+                              day_end: datetime, min_duration: timedelta = DEFAULT_DURATION) -> List[
+        Tuple[datetime, datetime]]:
         all_events = [slot for user in users for slot in user]
 
         merged = self.merge_events(all_events)

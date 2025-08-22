@@ -3,87 +3,91 @@ import requests
 import os
 import win32com.client as win32
 import warnings
+from api_config import MAIL_API_CONFIG, build_headers
+from mail_profiles import MAIL_PROFILES
 
 warnings.filterwarnings('ignore')
 
-# API 정보
-baseUrl = "https://openapi.stage.samsung.net/mail/api/v2.0"
-url = baseUrl + "/mails/send?userId=jjaamm.lee"
-token = "b6b7e0da-138f-32f9-8c6d-8a07b2efa53f"
-accountID = "KCC10REST03311"
-header = {
-    'Authorization': 'Bearer ' + token,
-    'System-ID': accountID,
-}
+BASE_URL = MAIL_API_CONFIG["BASE_URL"]
+USER_ID = MAIL_API_CONFIG["USER_ID"]
+URL = f"{BASE_URL}/mails/send?userId={USER_ID}"
+HEADERS = build_headers(stage=True)
 
 
 class MailSender:
-    def get_recipients_from_excel(self, sheet, pickUpCol):
+    def __init__(self, profile_key):
+        if profile_key not in MAIL_PROFILES:
+            raise ValueError(f"'{profile_key}' is not a valid mail profile.")
+        self.profile = MAIL_PROFILES[profile_key]
+
+    def get_recipients_from_excel(self, sheet):
         used_range = sheet.UsedRange
         row_count = used_range.Rows.Count
 
-        recipientList = []
+        recipients = []
+        filter_col = self.profile["filter_column"]
+        filter_val = self.profile["filter_value"]
+
         for i in range(1, row_count + 1):
-            if sheet.Cells(i, 3).Value != '01 AI개발실':
+            if sheet.Cells(i, filter_col).Value != filter_val:
                 continue
-            for col in pickUpCol:
+            for col in self.profile["recipient_columns"]:
                 email = sheet.Cells(i, col).Value
                 if email:
-                    recipientList.append({"emailAddress": email + '@samsung.com', "recipientType": "TO"})
-        return recipientList
+                    recipients.append({
+                        "emailAddress": email + '@samsung.com',
+                        "recipientType": "TO"
+                    })
+        return recipients
 
-    def remove_columns_and_save(self, sheet, workbook, removeCols):
+    def remove_columns_and_save(self, sheet, workbook):
         used_range = sheet.UsedRange
         row_count = used_range.Rows.Count
 
+        filter_col = self.profile["filter_column"]
+        filter_val = self.profile["filter_value"]
+
         for i in range(row_count, 2, -1):
-            cell_value = sheet.Cells(i, 3).Value
-            if not cell_value or 'AI개발실' not in str(cell_value):
+            cell_value = sheet.Cells(i, filter_col).Value
+            if not cell_value or filter_val not in str(cell_value):
                 sheet.Rows(i).Delete()
 
-        for col in sorted(removeCols, reverse=True):
+        for col in sorted(self.profile.get("remove_columns", []), reverse=True):
             sheet.Columns(col).Delete()
 
         used_range = sheet.UsedRange
         row_count = used_range.Rows.Count
         col_count = used_range.Columns.Count
 
+        additional_cols = self.profile.get("additional_columns", [])
         header_row = 1
-        new_cols = [col_count + 1, col_count + 2, col_count + 3]
-        headers = ['경비 사용 멘토 이름', '실 사용 금액', '비고']
-        yellow_color = 6
+        start_col = col_count + 1
 
-        for col, header in zip(new_cols, headers):
-            cell = sheet.Cells(header_row, col)
-            cell.Value = header
-            cell.Interior.ColorIndex = yellow_color
+        for offset, col_info in enumerate(additional_cols):
+            col_index = start_col + offset
+            cell = sheet.Cells(header_row, col_index)
+            cell.Value = col_info["name"]
+            cell.Interior.ColorIndex = col_info.get("color", 6)
             cell.Font.Bold = True
 
             borders = cell.Borders
-            borders(7).LineStyle = 1
-            borders(10).LineStyle = 1
-            borders(8).LineStyle = 1
-            borders(9).LineStyle = 1
+            borders(7).LineStyle = 1  # xlEdgeLeft
+            borders(8).LineStyle = 1  # xlEdgeTop
+            borders(9).LineStyle = 1  # xlEdgeBottom
+            borders(10).LineStyle = 1  # xlEdgeRight
 
-        data_range = sheet.Range(sheet.Cells(1, 1), sheet.Cells(row_count, col_count + 3))
+        last_col = col_count + len(additional_cols)
+        data_range = sheet.Range(sheet.Cells(1, 1), sheet.Cells(row_count, last_col))
         borders = data_range.Borders
-        for edge in [7, 8, 9, 10, 11, 12]:
+        for edge in [7, 8, 9, 10, 11, 12]:  # xlEdgeLeft to xlInsideVertical
             borders(edge).LineStyle = 1
+
         workbook.SaveAs(self.newFilePath)
 
     def send_mail(self, recipientList):
         body = {
-            "subject": "[테스트] 경력입사자 멘토링 실시",
-            "contents": f"""
-                <p><span style="font-family:맑은 고딕; font-size:13.3333px;">
-                    안녕하세요, AI개발실 ER 이재원입니다.<br><br>
-                    멘토링 자동화 테스트 메일입니다.<br>
-                    아래 링크를 통해 관련 내용을 확인하실 수 있습니다.<br><br>
-                    ▶ <a href="http://edm2.sec.samsung.net/cc/link/verLink/175497174727804373/12" target="_blank">
-                    멘토링 안내 바로가기</a><br><br>
-                    감사합니다.<br>
-                </span></p>
-            """,
+            "subject": self.profile["mail_subject"],
+            "contents": self.profile["mail_body"],
             "contentType": "HTML",
             "docSecuType": "PERSONAL",
             "sender": {
@@ -95,26 +99,24 @@ class MailSender:
         try:
             if self.newFilePath:
                 result = requests.post(
-                    url, headers=header, data=[('mail', (None, json.dumps(body)))],
+                    URL, headers=HEADERS, data=[('mail', (None, json.dumps(body)))],
                     files=[('attachments', (open(self.newFilePath, 'rb')))], verify=False
                 )
             else:
-                result = requests.post(url, headers=header, data=[('mail', (None, json.dumps(body)))], verify=False)
-            sendResult = result.json()
+                result = requests.post(URL, headers=HEADERS, data=[('mail', (None, json.dumps(body)))], verify=False)
 
+            sendResult = result.json()
             if sendResult.get('errorCode'):
                 print(f"[ERROR] {sendResult['errorCode']} - {sendResult.get('errorMessage', 'No error message')}")
             else:
-                print(f"[OK] result: {sendResult.get('result')}")
+                print(f"[{sendResult.get('result')}]: 메일 전송 성공")
         except Exception as e:
             print(f"[ERROR] 메일 전송 실패: {e}")
 
     def input_directory(self, prompt):
-        user_input = input(f"{prompt}: ").strip()
-        return user_input
+        return input(f"{prompt}: ").strip()
 
     def execute(self):
-        # Excel 열기
         excel = win32.DispatchEx('Excel.Application')
         excel.Visible = False
 
@@ -125,14 +127,13 @@ class MailSender:
         self.newFilePath = os.path.join(self.baseDir, self.new_filename)
 
         workbook = excel.Workbooks.Open(self.sourceFile)
-        sheet = workbook.Sheets(2)
-        pick_cols = [13, 16]
-        recipientList = self.get_recipients_from_excel(sheet, pick_cols)
+        sheet_index = self.profile.get("sheet_index", 1)
+        sheet = workbook.Sheets(sheet_index)
 
-        self.remove_columns_and_save(sheet, workbook, [2, 5, 6, 14])
-        self.send_mail(recipientList)
+        recipients = self.get_recipients_from_excel(sheet)
+        self.remove_columns_and_save(sheet, workbook)
+        self.send_mail(recipients)
 
-        # 엑셀 파일 닫기 및 종료
         workbook.Close(SaveChanges=0)
         excel.Quit()
 

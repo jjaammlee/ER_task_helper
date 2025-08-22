@@ -26,7 +26,8 @@ class ShellMailingCommand(Command):
         super().__init__(shell)
 
     def execute(self):
-        mail_sender = MailSender()
+        profile_key = input("메일 유형을 입력해주세요 (예: mentoring): ").strip()
+        mail_sender = MailSender(profile_key)
         mail_sender.execute()
 
 

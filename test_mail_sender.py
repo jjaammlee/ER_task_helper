@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 
 @pytest.fixture
 def mail_sender():
-    return MailSender()
+    return MailSender("mentoring")
 
 
 def test_send_mail(mocker, mail_sender):
@@ -19,13 +19,13 @@ def test_send_mail(mocker, mail_sender):
 
     mock_post.assert_called_once()
 
+
 def test_send_mail_with_attachment(mocker, mail_sender):
     mock_post = mocker.patch('mail_sender.requests.post')
     mock_post.return_value.json.return_value = {"result": "success"}
 
-    mail_sender.newFilePath = 'C:\\Users\\jjaamm.lee.SECDS\\Desktop\\ER업무dummy_path.xlsx'
+    mail_sender.newFilePath = 'C:\\Users\\Dummy\\Desktop\\dummy_file.xlsx'
 
-    # open 함수도 mock (실제 파일 읽지 않게)
     mocker.patch('builtins.open', mocker.mock_open(read_data='filedata'))
 
     recipients = [{'emailAddress': 'test@samsung.com', 'recipientType': 'TO'}]
@@ -46,13 +46,14 @@ def test_execute(mocker, mail_sender):
 
     mock_sheet = MagicMock()
     mock_workbook = MagicMock()
+
     mock_excel.Workbooks.Open.return_value = mock_workbook
-    mock_workbook.Sheets.__getitem__.return_value = mock_sheet
+    mock_workbook.Sheets.return_value = mock_sheet
 
     mocker.patch('builtins.input', side_effect=[
-        'C:\\Users\\Dummy\\Desktop',       # baseDir
-        'source.xlsx',                     # source
-        'modified.xlsx'                    # new_filename
+        'C:\\Users\\Dummy\\Desktop',  # baseDir
+        'source.xlsx',                # source
+        'modified.xlsx'               # new_filename
     ])
 
     mail_sender.execute()
