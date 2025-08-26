@@ -20,3 +20,14 @@
   - 사용 예시
   - <img width="570" height="133" alt="image" src="https://github.com/user-attachments/assets/e6d8197a-638e-4ffe-8986-89c3c4739217" />
   
+# [환경]
+- python 3.x
+- Windows환경 (메일 발송 시 win32com.client를 통한 excel자동화 필요)
+- 외부 라이브러리
+  - requests
+  - python-dateutil
+  - pywin32
+- 사내 Knox API사용 권한 필수
+  - 메일/스케줄러 기능은 내부 Knox API연동을 통해 동작합니다.
+  - 사용자는 Knox API사용을 위한 사내 결재/승인 절차를 완료해야 합니다.
+  - 승인된 API Key/Token이 있어야만 정상적으로 실행 가능합니다.
