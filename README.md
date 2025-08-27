@@ -16,6 +16,7 @@
   - mail_profiles.py에서 정의한 메일 유형에 따라 메일 수신자 목록과 메일 본문을 자동으로 구성
   - excel파일을 읽어 지정된 조건 (특정 부서/ 팀 필터)에 맞는 수신자 이메일 주소 추출
   - 불필요한 열을 삭제하고 추가 정보 열을 삽입하여 메일 발송용 excel파일 재가공
+  - 재가공 파일을 첨부하여 추출된 수신자 이메일 주소로 메일 유형에 따른 메일 본문을 작성하여 자동 메일 전송
   - win32com.client기반 excel자동화 지원 (Windows환경 필요)
   - 사용 예시
   - <img width="570" height="133" alt="image" src="https://github.com/user-attachments/assets/e6d8197a-638e-4ffe-8986-89c3c4739217" />
